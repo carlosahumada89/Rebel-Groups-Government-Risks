@@ -1,1 +1,7 @@
-# Rebel-Groups-Government-Risks
+# Rebel Groups Government Risks
+
+## Introduction
+Throughout history, governments from all around the world have had to deal with violent non-state actors engaged in conflict against them. The origins, goals and strategies of these rebel groups differ from one another depending on the circumstances of their countries at particular points in time. Although none of these groups should be underestimated by authorities since they can be a reflection of incomformity among society, particular attention should be put to those groups that represent a serious threat to the political stability of their countries. In this research project, a serious threat to the political stability of a country is understood as the explicit or implicit intention of a rebel group to remove the current leader(s) of their country without democratic means.
+
+## Conclusion
+It is highly probable that rebel groups will continue appearing in the upcoming years for different reasons. Governments arround the world could be able to make a better assessment of the political risks that they will face by using Machine Learning tools. Machine Learning algortihms such as SVM could be helpful to predict whether a rebel group has or will have at some point in time the intention to remove the current government leaders by looking at partial information disclosed by the group, or collected through intelligence. This assessment is crucial for the stability of a country. By anticipating the goals of these groups, governments can allocate their resources in a more effective way, and find the right strategy to guarantee peace and a solution to social demands.
