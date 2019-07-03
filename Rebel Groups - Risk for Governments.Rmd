@@ -1,0 +1,202 @@
+---
+title: "Rebel Groups: Assessing the risk for governments"
+author: "Carlos Ahumada"
+date: "March 28, 2019"
+output:
+  html_notebook:
+    toc: true 
+    toc_depth: 3  
+    theme: united  
+    highlight: tango  
+---
+
+#Introduction
+Throughout history, governments from all around the world have had to deal with violent non-state actors engaged in conflict against them. The origins, goals and strategies of these rebel groups differ from one another depending on the circumstances of their countries at particular points in time. Although none of these groups should be underestimated by authorities since they can be a reflection of incomformity among society, particular attention should be put to those groups that represent a serious threat to the political stability of their countries. In this research project, a serious threat to the political stability of a country is understood as the explicit or implicit intention of a rebel group to remove the current leader(s) of their country without democratic means. 
+
+#Research Question 
+Sometimes, a government may identify the upsurge of a rebel group in its country, and have limited information about it. The lack of information might be due to the short time that a group has been operating, or the secrecy of its goals, at least in some some aspects. For example, a rebel group might announce that they are fighting for a human rights cause, identify themselves as a left group, but not say anything about their political intentions. Motivated by this kind of situations, this research project attempts to answer the following question:
+
+Can we predict whether a rebel group has the intention of removing the current leadership of its country by looking at other declarations, behavior or characteristics of it? 
+
+#Hypothesis 
+To correctly predict if a rebel group wants to remove current government leaders or not, there are some characteristics that might be helpful. For example, some regimes might be particularly more at risk in this sense than others due to authoritarian practices, corruption, racial conflict or dispute over natural resources. In the same line, the year of formation of the rebel group might be another indication. It might be the case that groups that want to remove the current government leaders might be an inspiration for the formation of groups in other countries, and for so appear in waves. Furthermore, the direct or indirect support from another country to the rebel group, might be also an indication that the government leadership is at risk. The country that is supporting the rebel group might want to destabilize the affected country for geopolitical reasons. 
+
+#Data
+For this project the Foundations of Rebel Group Emergence (FORGE) [Dataset](https://www.jessicamaves.com/forge.html) will be used. According to the authors, "[the] dataset provides information on the origins of violent non-state actors engaged in armed conflict against their government resulting in 25+ yearly battle deaths, active between 1946 and 2011. The unit of observation in this dataset is the rebel group organization."
+
+The variables thar are going to be used to predict the classification are:<br>
+<br> Response <br>
+*goalchange* - Indicator (0=no, 1=yes): was the group's initial goal to remove the current leader(s) of
+government? (not democratization) <br>
+<br> Predictors
+<br>*cname* - Country name (government being challenged by rebel group of observation)<br> 
+*foundyear* - Year of rebel group's formation <br>
+<br> Predictors (Indicators (0=no, 1=yes)) <br>
+*fightyear* - first year of incompatibility with government resulting in 25 or more battle deaths<br>
+*goalindep* - was the group's initial goal the pursuit of an independent state? <br>
+*goalauto* -  was the group's initial goal the pursuit of (increased) autonomy for their region within the existing state?<br>
+*goaldem* - was the group's initial goal to democratize the political system?<br>
+*ideolnat* - did the group proclaim a nationalist ideology?<br>
+*goalrights* -was the group's initial goal the pursuit of increased/improved group rights (e.g. language, education)?<br>
+*goalrep* - was the group's initial goal the pursuit of increased/improved political representation and/or participation? <br>
+*ideology* - was the rebel group founded with a specific political ideology?<br>
+*ideolanti* - did the group proclaim an anti-system political ideology? <br>
+*preorgreb* - did the rebel group splinter from an existing rebel group that already caused at least 25 battle deaths in conflict with the government? <br> 
+*preorgpar* - did the rebel group develop from a political party? These are organizations that express a desire to contest elections and/or hold political office.<br>
+*preorgmil* - did the rebel group develop from the government's current armed forces?<br>
+*preorggov* - did the rebel group develop from a non-military faction of the current government?<br>
+*preorgfor* - did the rebel group develop from a group of foreign
+fighters/mercenaries/troops of another government's armed forces? <br>
+
+#Model
+To attempt to predict whether a rebel group has the intention to remove the current leadership of the country or not, a Support Vector Machine (SVM) model will be implemented. 
+
+```{r include=FALSE}
+library(ggplot2)
+library (DMwR)
+library(caret)
+library (knitr)
+```
+
+```{r include=FALSE}
+#Loading dataset
+rebel <- read.csv("C:/Users/carlo/Desktop/rebel.csv", encoding="UTF-8", sep=",")
+
+#Selecting variables
+rebel2 <- rebel [ , c("cname", "foundyear", "fightyear", "goalindep", "goalauto", "goalchange", "goaldem", "ideolnat", "goalrights", "goalrep", "ideology", "ideolanti", "preorgreb", "preorgpar", "preorgmil", "preorggov", "preorgfor")]
+```
+
+
+```{r include=FALSE}
+#Converting variables to factors  
+cols <- c("cname", "foundyear", "fightyear", "goalindep", "goalauto", "goalchange", "goaldem", "ideolnat", "ideolanti", "preorgreb", "preorgpar", "preorgmil", "preorggov", "preorgfor", "goalrights", "ideology", "goalrep")
+rebel2[cols] <- lapply(rebel2[cols], factor)
+rebel2 <- rebel2 [complete.cases(rebel2), ]
+str(rebel2)
+```
+
+#Class Imbalance
+```{r echo=FALSE}
+#Assessing class imbalance
+table(rebel2$goalchange)
+balance <- ggplot(data = rebel2) + 
+  geom_bar(mapping = aes(x = goalchange, fill = goalchange))
+balance <- balance+scale_fill_manual(values=c("Darkgreen", "red")) 
+balance + ggtitle("Number of Rebel Groups Wanting to Remove Government Leaders (1946-2011)")
+```
+Given that there are slightly more rebel groups wanting to remove current government leaders in a non-democratic way, a class imbalance solution can be implemented to obtain unbiased results from the model.
+
+
+```{r include=FALSE}
+#Data partition into train test set
+#(Note that a split into train, dev and test set is not recommended in this case due to the low number of observations)
+sample_size <- floor(0.70 * nrow(rebel2))
+set.seed(1628)
+rebel_index <- sample(seq_len(nrow(rebel2)), size = sample_size)
+train <- rebel2[rebel_index, ]
+test <-rebel2[-rebel_index, ]
+```
+
+```{r}
+#Class imbalance solution for training set
+#Synthetic Minority Oversampling Technique (SMOTE) To Handle Class Imbalancy In Binary Classification
+train <- SMOTE(goalchange ~., train, perc.over = 100)
+table(train$goalchange)
+```
+
+Now that the data has been divided into train and test set (no development set due to the small number of observations), and that a class imbalance solution has been implemented for the test set, we can develop the SVM model. 
+
+#SVM linear Model
+
+```{r}
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+set.seed(1628)
+svm_Linear <- train(goalchange ~., data = train, method = "svmLinear",
+                 trControl=trctrl,
+                 preProcess = c("center", "scale"),
+                 tuneLength = 10)
+svm_Linear
+```
+
+An accurracy of .9093 is reported for a linear Support Vector Machine Model. Now, let's test the model in the test data and try to predict the outcome. It is importanto to notice that the tuning parameter cost, is held constant at 1 for linear models. 
+
+#Estimation SVM Linear
+```{r}
+test_pred <- predict(svm_Linear, newdata = test)
+confusionMatrix(test_pred, test$goalchange, mode="everything")
+```
+
+The linear SVM model reports an accuracy of .748 and a F1 score of .7746. The accuracy of the model dropped significantly when performing on the test set. It is important to highlight that while the model presents a good recall score (.8594), the precision is rather low (.7051). This means that the number of false positives is high compared to the number of true positives. In other words the model is predicting significantly more "no risk for government leaders" rebel groups than the true number of "no risk for government leaders". 
+
+
+##Changin the cost of the SVM 
+Now, to tune the model, a change in cost will take place. By doing this, the margin of the SVM will be modified, an with it, the number of observations that fall within it. 
+
+```{r echo=TRUE}
+grid <- expand.grid(C = c(0,0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2,5))
+set.seed(1628)
+svm_Linear2 <- train(goalchange ~., data = train, method = "svmLinear",
+                    trControl=trctrl,
+                    preProcess = c("center", "scale"),
+                    tuneGrid = grid,
+                    tuneLength = 10)
+svm_Linear2
+```
+With this function, the optimal cost, the one tha provides the highest accuracy, is 0.05.
+
+```{r}
+plot(svm_Linear2)
+```
+Now, the new model with a cost of 0.05 wil be used to predict the outcome in the test set. 
+
+```{r}
+test_pred2 <- predict(svm_Linear2, newdata = test)
+confusionMatrix(test_pred2, test$goalchange, mode="everything")
+```
+By changing the cost the acurracy of the model does not increase. However, although marginal, it is important to notice that this increase in accuracy came with a decrease of the F1 score from .7746 with a cost of C=1, to .7714 with a cost of C=0.5. 
+
+#SVM Radial Kernel
+After fitting a linear SVM model, it might be worth to explore a radial kernel. This method, clusters is useful to classify data that is not linearly separable. 
+
+```{r}
+set.seed(1628)
+svm_Radial <- train(goalchange ~., data = train, method = "svmRadial",
+  trControl=trctrl,
+  preProcess = c("center", "scale"),
+  tuneLength = 10)
+svm_Radial
+```
+In the radial kernel, the optimal cost, the one that provides the higher accurracy, is C=4. Now, this model will be used to predict the outcomes on the test set and compared its performance to the linear SVM one. 
+
+#Estimation SVM Radial
+
+```{r}
+test_pred_radial <- predict(svm_Radial, newdata = test)
+confusionMatrix(test_pred_radial, test$goalchange, mode="everything")
+```
+The accuracy of the model with a radial kernel decreases from .748 (SVM Linear) to .7323 (SVM Radial). Precision, recall and F1 score also fall. 
+
+#Discussion
+SVM models result to be a good approach while trying to predict whether a rebel group is trying or will try to remove the current leaders of the government in their country. Among these models, the SVM linear kernel outperforms the radial kernel approach. However, it would be necessary to explore other models and see if the accurcy and F1 scores could increase. The table below presents the reported accuracy and F1 scores for the different SVM models. 
+
+```{r echo=FALSE}
+model <- c("SVM Linear C=1", "SVM Linear C=0.5", "SVM Radial")
+accuracy <- c("0.748", "0.748", "0.7323")
+F1_score <- c(" 0.7746", " 0.7714", "0.7571")
+results <- as.data.frame(cbind(model, accuracy, F1_score))
+kable(results)
+```
+
+#Conclusion
+It is highly probable that rebel groups will continue appearing in the upcoming years for different reasons. Governments arround the world could be able to make a better assessment of the political risks that they will face by using Machine Learning tools. Machine Learning algortihms such as SVM could be helpful to predict whether a rebel group has or will have at some point in time the intention to remove the current government leaders by looking at partial information disclosed by the group, or collected through intelligence. This assessment is crucial for the stability of a country. By anticipating the goals of these groups, governments can allocate their resources in a more effective way, and find the right strategy to guarantee peace and a solution to social demands. 
+
+
+
+
+
+
+
+
+
+
+        
